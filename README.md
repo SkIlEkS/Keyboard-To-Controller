@@ -1,4 +1,4 @@
-# Keypad — Keyboard to Controller
+# Keyboard To Controller
 
 Use your keyboard to control games that support an Xbox 360 controller. For example, you can make the **B** key press **RT** at **70% strength**.
 
@@ -6,7 +6,7 @@ Use your keyboard to control games that support an Xbox 360 controller. For exam
 
 ### 1. Download the app
 
-Download and open [ControllerMapper.exe](./dist/ControllerMapper.exe). 
+Download and open [KeyboardToController.exe](./dist/KeyboardToController.exe). 
 
 ### 2. Install controller support
 
@@ -21,6 +21,13 @@ The app needs the **ViGEmBus** virtual controller driver to send Xbox controller
 5. Click **Save** and hold your key to use the controller input.
 
 Your bindings are saved automatically, so they will still be there next time you open the app.
+
+## Set bind priority
+
+When two held keys are assigned to the same controller output, the binding higher in
+the list takes control. Select a binding and use **Move up** or **Move down** to
+change its priority. For example, putting `E` above `W` for **RT** makes `E` take
+control while both keys are held; releasing `E` lets the `W` binding take over again.
 
 ## Pause or resume your bindings
 
@@ -42,7 +49,7 @@ Clicking the window's **X** hides the app in the system tray. The app stays runn
 
 ## Optional: run or build from source
 
-These steps are only for people who want to work on the app. Most users should use `dist/ControllerMapper.exe` instead.
+These steps are only for people who want to work on the app. Most users should use `dist/KeyboardToController.exe` instead.
 
 You will need Windows 10 or later, Python 3.10 or later, and ViGEmBus. Open PowerShell in the project folder and run:
 
@@ -58,4 +65,4 @@ py -m pip install -r requirements.txt pyinstaller
 py -m PyInstaller --noconfirm --clean ControllerMapper.spec
 ```
 
-The rebuilt app will be in `dist/ControllerMapper.exe`.
+The rebuilt app will be in `dist/KeyboardToController.exe`.

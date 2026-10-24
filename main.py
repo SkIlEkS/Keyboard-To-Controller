@@ -248,7 +248,7 @@ class MapperWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Keypad  |  Controller Mapper")
+        self.setWindowTitle("Keyboard To Controller")
         self.app_icon = Path(__file__).resolve().parent / "gamepad-icon-wide.png"
         self.app_icon_tray = Path(__file__).resolve().parent / "gamepad-icon.png"
         if self.app_icon.is_file():
@@ -285,9 +285,9 @@ class MapperWindow(QMainWindow):
         self.tray_unavailable = False
         icon = QIcon(str(self.app_icon_tray)) if self.app_icon_tray.is_file() else self.windowIcon()
         self.tray_icon = QSystemTrayIcon(icon, self)
-        self.tray_icon.setToolTip("Keypad · Controller Mapper")
+        self.tray_icon.setToolTip("Keyboard To Controller")
         menu = QMenu(self)
-        show_action = QAction("Open Controller Mapper", self)
+        show_action = QAction("Open Keyboard To Controller", self)
         show_action.triggered.connect(self.show_window)
         menu.addAction(show_action)
         menu.addSeparator()
@@ -343,7 +343,7 @@ class MapperWindow(QMainWindow):
         page_title = QLabel("Keyboard bindings")
         page_title.setObjectName("pageTitle")
         page_title.setStyleSheet("background-color: transparent;")
-        subtitle = QLabel("Map your keys to Xbox controller inputs.")
+        subtitle = QLabel("Map your keys to Xbox controller inputs. Higher rows have priority.")
         subtitle.setObjectName("muted")
         subtitle.setStyleSheet("background-color: transparent;")
         heading.addWidget(page_title)
@@ -359,13 +359,14 @@ class MapperWindow(QMainWindow):
         header.addWidget(add_button)
         right_layout.addLayout(header)
 
-        self.table = QTableWidget(0, 3)
-        self.table.setHorizontalHeaderLabels(["KEY", "CONTROLLER OUTPUT", "VALUE"])
+        self.table = QTableWidget(0, 4)
+        self.table.setHorizontalHeaderLabels(["PRIORITY", "KEY", "CONTROLLER OUTPUT", "VALUE"])
         header = self.table.horizontalHeader()
         header.setDefaultAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         header.setSectionResizeMode(0, header.ResizeMode.ResizeToContents)
-        header.setSectionResizeMode(1, header.ResizeMode.Stretch)
-        header.setSectionResizeMode(2, header.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(1, header.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(2, header.ResizeMode.Stretch)
+        header.setSectionResizeMode(3, header.ResizeMode.ResizeToContents)
         self.table.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
@@ -379,8 +380,14 @@ class MapperWindow(QMainWindow):
         self.remove_button = QPushButton("Remove")
         self.edit_button.clicked.connect(self.edit_binding)
         self.remove_button.clicked.connect(self.remove_binding)
+        self.move_up_button = QPushButton("Move up")
+        self.move_down_button = QPushButton("Move down")
+        self.move_up_button.clicked.connect(lambda: self.move_binding(-1))
+        self.move_down_button.clicked.connect(lambda: self.move_binding(1))
         actions.addWidget(self.edit_button)
         actions.addWidget(self.remove_button)
+        actions.addWidget(self.move_up_button)
+        actions.addWidget(self.move_down_button)
         actions.addStretch()
         right_layout.addLayout(actions)
 
@@ -530,6 +537,23 @@ class MapperWindow(QMainWindow):
             self.persist_bindings()
             self.apply_controller_state()
 
+    def move_binding(self, offset):
+        index = self.selected_index()
+        if index is None:
+            return
+        new_index = index + offset
+        if not 0 <= new_index < len(self.bindings):
+            return
+        with self.state_lock:
+            self.bindings[index], self.bindings[new_index] = (
+                self.bindings[new_index],
+                self.bindings[index],
+            )
+        self.refresh_table()
+        self.table.selectRow(new_index)
+        self.persist_bindings()
+        self.apply_controller_state()
+
     def toggle_bindings(self):
         with self.state_lock:
             self.bindings_enabled = not self.bindings_enabled
@@ -578,7 +602,7 @@ class MapperWindow(QMainWindow):
         self.table.setRowCount(len(self.bindings))
         for row, binding in enumerate(self.bindings):
             value = f"{binding.value}%" if binding.control in ANALOG_CONTROLS else "—"
-            for column, text in enumerate((binding.key, binding.control, value)):
+            for column, text in enumerate((str(row + 1), binding.key, binding.control, value)):
                 item = QTableWidgetItem(text)
                 item.setTextAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
                 self.table.setItem(row, column, item)
@@ -610,10 +634,16 @@ class MapperWindow(QMainWindow):
         with self.state_lock:
             bindings_enabled = self.bindings_enabled
             pressed_bindings = [b for b in self.bindings if key_id(b.key) in self.held_keys]
-            active = [
+            pressed_active = [
                 binding for binding in pressed_bindings
                 if bindings_enabled and binding.control != TOGGLE_BINDINGS
             ]
+            active = []
+            active_controls = set()
+            for binding in pressed_active:
+                if binding.control not in active_controls:
+                    active.append(binding)
+                    active_controls.add(binding.control)
             toggle_pressed = any(b.control == TOGGLE_BINDINGS for b in pressed_bindings)
 
         details = [
@@ -685,11 +715,11 @@ class MapperWindow(QMainWindow):
 def main():
     if os.name == "nt":
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
-            "Keypad.ControllerMapper"
+            "Keypad.KeyboardToController"
         )
     app = QApplication(sys.argv)
     app.setOrganizationName("Keypad")
-    app.setApplicationName("Controller Mapper")
+    app.setApplicationName("Keyboard To Controller")
     app.setQuitOnLastWindowClosed(False)
     icon_path = Path(__file__).resolve().parent / "gamepad-icon-wide.png"
     if icon_path.is_file():

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package
+    Name="Keyboard To Controller"
+    Manufacturer="SkIlEkS"
+    Version="1.0.1"
+    UpgradeCode="{7D0F3DF1-1C4C-4C7D-9D5E-123456789ABC}">
+
+    <MajorUpgrade DowngradeErrorMessage="A newer version of Keyboard To Controller is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="Keyboard To Controller" />
+    </StandardDirectory>
+
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="ApplicationProgramsFolder" Name="Keyboard To Controller" />
+    </StandardDirectory>
+
+    <Feature Id="MainFeature" Title="Keyboard To Controller" Level="1">
+      <Component Directory="INSTALLFOLDER" Guid="*">
+        <File
+          Source="$(var.SourceDir)\KeyboardToController.exe"
+          KeyPath="yes" />
+      </Component>
+
+      <Component Directory="ApplicationProgramsFolder" Guid="*">
+        <Shortcut
+          Name="Keyboard To Controller"
+          Target="[INSTALLFOLDER]KeyboardToController.exe"
+          WorkingDirectory="INSTALLFOLDER" />
+        <RemoveFolder On="uninstall" />
+        <RegistryValue
+          Root="HKCU"
+          Key="Software\SkIlEkS\KeyboardToController"
+          Name="Installed"
+          Type="integer"
+          Value="1"
+          KeyPath="yes" />
+      </Component>
+    </Feature>
+  </Package>
+</Wix>

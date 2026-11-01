@@ -6,7 +6,7 @@ Use your keyboard to control games that support an Xbox 360 controller. For exam
 
 ### 1. Download the app
 
-Download and open [KeyboardToController.exe](./dist/KeyboardToController.exe). 
+Download and open installer [KeyboardToController-1.0.2.msi](./dist/KeyboardToController-1.0.2.msi). 
 
 ### 2. Install controller support
 
@@ -44,13 +44,11 @@ Clicking the window's **X** hides the app in the system tray. The app stays runn
 
 ## If something does not work
 
-- **The game does not respond:** Make sure ViGEmBus is installed and your bindings are enabled. Some games only detect controllers when started after the virtual controller is available.
-- **The app says the controller is unavailable:** The app retries while ViGEmBus finishes starting after Windows boots. If it remains unavailable, install or repair ViGEmBus.
+- **The game does not respond:** Make sure ViGEmBus is installed and your bindings are enabled. Some games only detect controllers when started after the virtual controller is available. (Open the app before running the game.)
+- **The app says the controller is unavailable:** Install or repair ViGEmBus.
 - **The app is still running after clicking X:** This is expected. Find its gamepad icon in the system tray, then choose **Quit** to exit.
 
 ## Optional: run or build from source
-
-These steps are only for people who want to work on the app. Most users should use `dist/KeyboardToController.exe` instead.
 
 You will need Windows 10 or later, Python 3.10 or later, and ViGEmBus. Open PowerShell in the project folder and run:
 
@@ -66,4 +64,3 @@ py -m pip install -r requirements.txt pyinstaller
 py -m PyInstaller --noconfirm --clean ControllerMapper.spec
 ```
 
-The rebuilt app will be in `dist/KeyboardToController.exe`.

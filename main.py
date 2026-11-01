@@ -6,8 +6,9 @@ import threading
 from dataclasses import dataclass
 from pathlib import Path
 
-from PySide6.QtCore import QEvent, QStandardPaths, Qt, Signal
+from PySide6.QtCore import QEvent, QStandardPaths, QTimer, Qt, Signal
 from PySide6.QtGui import QAction, QIcon
+from PySide6.QtNetwork import QLocalServer, QLocalSocket
 from PySide6.QtWidgets import (
     QApplication,
     QComboBox,
@@ -41,6 +42,7 @@ except ImportError:
 
 ANALOG_CONTROLS = {"LT", "RT"}
 TOGGLE_BINDINGS = "Toggle bindings"
+INSTANCE_SERVER_NAME = "KeyboardToController.SingleInstance"
 CONTROLS = [
     "A", "B", "X", "Y", "LB", "RB", "LT", "RT",
     "View", "Menu", "L3", "R3",
@@ -104,6 +106,40 @@ def normalized_key(key):
 
 def key_id(key):
     return key.lower() if len(key) == 1 else key.casefold()
+
+
+def notify_existing_instance():
+    socket = QLocalSocket()
+    socket.connectToServer(INSTANCE_SERVER_NAME)
+    if not socket.waitForConnected(250):
+        return False
+    socket.write(b"show\n")
+    socket.waitForBytesWritten(250)
+    socket.disconnectFromServer()
+    return True
+
+
+def create_instance_server(parent, show_window):
+    server = QLocalServer(parent)
+    if not server.listen(INSTANCE_SERVER_NAME):
+        QLocalServer.removeServer(INSTANCE_SERVER_NAME)
+        if not server.listen(INSTANCE_SERVER_NAME):
+            raise RuntimeError(f"Unable to create single-instance server: {server.errorString()}")
+
+    def handle_connection():
+        socket = server.nextPendingConnection()
+        if socket is None:
+            return
+
+        def handle_message():
+            if bytes(socket.readAll()).strip() == b"show":
+                show_window()
+
+        socket.readyRead.connect(handle_message)
+        socket.disconnected.connect(socket.deleteLater)
+
+    server.newConnection.connect(handle_connection)
+    return server
 
 
 class KeyCaptureDialog(QDialog):
@@ -263,6 +299,9 @@ class MapperWindow(QMainWindow):
         self.output_lock = threading.Lock()
         self.gamepad = None
         self.listener = None
+        self.backend_retry_timer = QTimer(self)
+        self.backend_retry_timer.setSingleShot(True)
+        self.backend_retry_timer.timeout.connect(self.initialize_backend)
         self.config_path = Path(
             QStandardPaths.writableLocation(QStandardPaths.StandardLocation.AppConfigLocation)
         ) / "bindings.json"
@@ -311,6 +350,7 @@ class MapperWindow(QMainWindow):
             self.show_window()
 
     def quit_app(self):
+        self.backend_retry_timer.stop()
         if self.listener:
             self.listener.stop()
             self.listener = None
@@ -429,9 +469,9 @@ class MapperWindow(QMainWindow):
 
     def initialize_backend(self):
         listener_error = None
-        if keyboard is None:
+        if self.listener is None and keyboard is None:
             listener_error = "Keyboard listener unavailable: install requirements.txt."
-        else:
+        elif self.listener is None:
             try:
                 self.listener = keyboard.Listener(on_press=self.on_key_press, on_release=self.on_key_release)
                 self.listener.start()
@@ -448,12 +488,15 @@ class MapperWindow(QMainWindow):
         try:
             self.gamepad = vg.VX360Gamepad()
         except Exception as error:
+            self.gamepad = None
             self.status_label.setText(
                 self.with_config_notice(
-                    f"Controller unavailable: {error} {listener_error or ''}"
+                    f"Controller unavailable: {error} Retrying… {listener_error or ''}"
                 )
             )
+            self.backend_retry_timer.start(2000)
             return
+        self.backend_retry_timer.stop()
         if listener_error:
             self.status_label.setText(
                 self.with_config_notice(f"Controller connected · {listener_error}")
@@ -462,6 +505,7 @@ class MapperWindow(QMainWindow):
             self.status_label.setText(
                 self.with_config_notice("Ready  ·  Xbox 360 virtual controller connected")
             )
+        self.apply_controller_state()
 
     def with_config_notice(self, status):
         if self.tray_unavailable:
@@ -718,13 +762,18 @@ def main():
             "Keypad.KeyboardToController"
         )
     app = QApplication(sys.argv)
+    if notify_existing_instance():
+        return
     app.setOrganizationName("Keypad")
     app.setApplicationName("Keyboard To Controller")
     app.setQuitOnLastWindowClosed(False)
     icon_path = Path(__file__).resolve().parent / "gamepad-icon-wide.png"
     if icon_path.is_file():
         app.setWindowIcon(QIcon(str(icon_path)))
+    window = None
+    instance_server = create_instance_server(app, lambda: window.show_window())
     window = MapperWindow()
+    window.instance_server = instance_server
     window.show()
     sys.exit(app.exec())
 

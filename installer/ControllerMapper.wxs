@@ -3,7 +3,7 @@
   <Package
     Name="Keyboard To Controller"
     Manufacturer="SkIlEkS"
-    Version="1.0.1"
+    Version="1.0.2"
     UpgradeCode="{7D0F3DF1-1C4C-4C7D-9D5E-123456789ABC}">
 
     <MajorUpgrade DowngradeErrorMessage="A newer version of Keyboard To Controller is already installed." />

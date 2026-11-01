@@ -40,11 +40,12 @@ Clicking the window's **X** hides the app in the system tray. The app stays runn
 
 - Double-click the gamepad icon in the tray to reopen the app.
 - Right-click the icon and choose **Quit** to close the app completely.
+- Opening the app again while it is in the tray brings the existing window back instead of starting another instance.
 
 ## If something does not work
 
 - **The game does not respond:** Make sure ViGEmBus is installed and your bindings are enabled. Some games only detect controllers when started after the virtual controller is available.
-- **The app says the controller is unavailable:** Install or repair ViGEmBus, then close and reopen the app.
+- **The app says the controller is unavailable:** The app retries while ViGEmBus finishes starting after Windows boots. If it remains unavailable, install or repair ViGEmBus.
 - **The app is still running after clicking X:** This is expected. Find its gamepad icon in the system tray, then choose **Quit** to exit.
 
 ## Optional: run or build from source
